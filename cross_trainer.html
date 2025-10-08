@@ -179,6 +179,17 @@
 			border-width: 0 2px 2px 0;
 			transform: rotate(45deg);
 		}
+		
+		#length-hint {
+			display: inline-block;
+			width: 45px;
+			text-align: center;
+			background-color: white;
+		}
+		
+		#length-hint:hover {
+			background-color: #000a;
+		}
 	</style>
 
 </head>
@@ -278,6 +289,9 @@
 	<button id="next" class="button medium" onclick="genscr()">Next</button><br>
 	<h2 id="scr"></h2>
 	<div id="show"></div>
+	<h2 id="length-hint-header" style="display:none;">
+		Hint: <span id="length-hint"></span> moves
+	</h2>
 	<label for="premove">Pre Move: </label>
 	<input type="text" id="premove"><br>
 	<button id="solveButton" class="button medium" onclick="startWorker()">Solve</button><br>
@@ -802,6 +816,10 @@
 					var scramble = min2phase.solve(generateTwoPhaseInputWrapper(convert(ret[1] + reverse(ret[0]))[0]));
 					scramble = scr_fix(rot + scramble);
 					document.getElementById('scr').innerHTML = scramble;
+					if (sol_len_equality !== "eq") {
+						document.getElementById('length-hint-header').style.display = "block";
+						document.getElementById('length-hint').innerText = sol_len_value;
+					}
 					try {
 						document.getElementById('show').innerHTML = '';
 						const sim = createPlayer(scramble, '');
