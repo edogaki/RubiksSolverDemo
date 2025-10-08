@@ -255,6 +255,11 @@
 		<option translate="no" value="x y'">x y'</option>
 	</select><br>
 	<label for="len">Length: </label>
+	<select translate="no" id="len-equality">
+		<option translate="no" value="eq" selected>=</option>
+		<option translate="no" value="le">≤</option>
+		<option translate="no" value="ge">≥</option>
+	</select>
 	<select translate="no" id="len">
 		<option translate="no" value="1">1</option>
 		<option translate="no" value="2">2</option>
@@ -264,6 +269,11 @@
 		<option translate="no" value="6">6</option>
 		<option translate="no" value="7" selected>7</option>
 		<option translate="no" value="8">8</option>
+	</select><br>
+	<label for="len">Random Distribution: </label>
+	<select translate="no" id="random-distribution">
+		<option translate="no" value="uniform" selected>Uniform</option>
+		<option translate="no" value="realistic">Realistic</option>
 	</select><br>
 	<button id="next" class="button medium" onclick="genscr()">Next</button><br>
 	<h2 id="scr"></h2>
@@ -675,6 +685,93 @@
 			}
 		}
 
+		function getRandomLen(len, equality, dist) {
+			const length = Number(len);
+			const lengths = [1, 2, 3, 4, 5, 6, 7, 8];
+			// http://www.cubezone.be/crossstudy.html
+			const weightsRealistic = {
+				1: 15,
+				2: 158,
+				3: 1394,
+				4: 9809,
+				5: 46381,
+				6: 97254,
+				7: 34966,
+				8: 102
+			};
+			let leCumulativeRealistic = { };
+			for (const l of lengths) {
+				leCumulativeRealistic[l] = weightsRealistic[l] + (leCumulativeRealistic[l - 1] || 0);
+			}
+			let geCumulativeRealistic = { };
+			for (const l of lengths.concat().reverse()) {
+				geCumulativeRealistic[l] = weightsRealistic[l] + (geCumulativeRealistic[l + 1] || 0);
+			}
+			console.log( { leCumulativeRealistic, geCumulativeRealistic });
+			const weightsUniform = {
+				1: 1,
+				2: 1,
+				3: 1,
+				4: 1,
+				5: 1,
+				6: 1,
+				7: 1,
+				8: 1
+			};
+			let leCumulativeUniform = { };
+			for (const l of lengths) {
+				leCumulativeUniform[l] = weightsUniform[l] + (leCumulativeUniform[l - 1] || 0);
+			}
+			let geCumulativeUniform = { };
+			for (const l of lengths.concat().reverse()) {
+				geCumulativeUniform[l] = weightsUniform[l] + (geCumulativeUniform[l + 1] || 0);
+			}
+			console.log( { leCumulativeUniform, geCumulativeUniform });
+
+			let leCumulative, geCumulative;
+
+			switch (dist) {
+				case "realistic":
+					leCumulative = leCumulativeRealistic;
+					geCumulative = geCumulativeRealistic;
+					break;
+				case "uniform":
+				default:
+					leCumulative = leCumulativeUniform;
+					geCumulative = geCumulativeUniform;
+					break;
+			}
+			
+			const randNum = Math.random();
+
+			switch (equality) {
+				case "eq": {
+					return len;
+				}
+				case "le": {
+					const total = leCumulative[length];
+					for (const l of lengths) {
+						console.log({ total, l, leCumulative: leCumulative[l], rtotal: randNum * total});
+						if (randNum * total < leCumulative[l]) {
+							return l.toString();
+						}
+					}
+					return len;
+				}
+				case "ge": {
+					const total = geCumulative[length];
+					for (const l of lengths.concat().reverse()) {
+						console.log({ total, l, geCumulative: geCumulative[l], rtotal: randNum * total});
+						if (randNum * total < geCumulative[l]) {
+							return l.toString();
+						}
+					}
+					return len;
+				}
+			}
+
+		}
+
 		function genscr() {
 			if (!isFunctionsReady) {
 				alert("The module is still initializing. Please try again in a moment.");
@@ -685,6 +782,9 @@
 				return;
 			}
 			const sol_len = document.getElementById("len").value;
+			const sol_len_equality = document.getElementById("len-equality").value;
+			const sol_len_dist = document.getElementById("random-distribution").value;
+			const sol_len_value = getRandomLen(sol_len, sol_len_equality, sol_len_dist);
 			const rot = document.getElementById("rot").value;
 			const mask_input = getMaskInputs();
 			const convertedMask = convertMask(mask_input.maskInputCenter, mask_input.maskInputEdges, mask_input.maskInputCorners, rot);
@@ -694,7 +794,7 @@
 			if (!worker2) {
 				worker2 = new Worker('src/crossTrainer/worker.js');
 			}
-			var args = { scr: solution, len: sol_len };
+			var args = { scr: solution, len: sol_len_value };
 			worker2.postMessage(args);
 			if (worker2) {
 				worker2.onmessage = function (event) {
